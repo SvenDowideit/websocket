@@ -1,0 +1,10 @@
+version: '2'
+services:
+  socket:
+    image: svendowideit/gochat:latest
+    links:
+      - redis
+    ports:
+      - "80:80"
+  redis:
+    image: redis

@@ -4,4 +4,4 @@ build:
 
 
 run:
-	docker run --rm -it -p 80:80 websocket
+	docker run --rm -it --link redis -p 80:80 websocket

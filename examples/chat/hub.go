@@ -4,6 +4,12 @@
 
 package main
 
+import (
+	"fmt"
+
+	"gopkg.in/redis.v4"
+)
+
 // hub maintains the set of active connections and broadcasts messages to the
 // connections.
 type Hub struct {
@@ -28,6 +34,39 @@ var hub = Hub{
 }
 
 func (h *Hub) run() {
+    client := redis.NewClient(&redis.Options{
+        Addr:     "redis:6379",
+        Password: "", // no password set
+        DB:       0,  // use default DB
+    })
+
+    pong, err := client.Ping().Result()
+    fmt.Println(pong, err)
+
+	pubsub, err := client.Subscribe("chat")
+if err != nil {
+    panic(err)
+}
+defer pubsub.Close()
+go func() {
+	for {
+		message, err := pubsub.ReceiveMessage()
+		if err != nil {
+		    panic(err)
+		}
+		fmt.Printf("redis receive: %s\n", message.Payload)
+		for conn := range h.connections {
+			select {
+			case conn.send <- []byte(message.Payload):
+			default:
+				close(conn.send)
+				delete(hub.connections, conn)
+			}
+		}
+	}
+}()
+
+
 	for {
 		select {
 		case conn := <-h.register:
@@ -38,13 +77,9 @@ func (h *Hub) run() {
 				close(conn.send)
 			}
 		case message := <-h.broadcast:
-			for conn := range h.connections {
-				select {
-				case conn.send <- message:
-				default:
-					close(conn.send)
-					delete(hub.connections, conn)
-				}
+			err = client.Publish("chat", string(message)).Err()
+			if err != nil {
+			    panic(err)
 			}
 		}
 	}
