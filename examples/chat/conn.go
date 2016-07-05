@@ -55,6 +55,7 @@ func (c *Conn) readPump() {
 	c.ws.SetReadLimit(maxMessageSize)
 	c.ws.SetReadDeadline(time.Now().Add(pongWait))
 	c.ws.SetPongHandler(func(string) error { c.ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	localAddr := []byte(c.ws.LocalAddr().String() + ": ")
 	for {
 		_, message, err := c.ws.ReadMessage()
 		if err != nil {
@@ -64,7 +65,8 @@ func (c *Conn) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		hub.broadcast <- message
+		
+		hub.broadcast <- append(localAddr, message...)
 	}
 }
 
