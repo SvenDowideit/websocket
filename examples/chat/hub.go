@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"gopkg.in/redis.v4"
 )
@@ -70,6 +71,15 @@ go func() {
 	for {
 		select {
 		case conn := <-h.register:
+			name, err := os.Hostname()
+			if err != nil {
+			    panic(err)
+			}
+			message := "Connection: " + name
+			err = client.Publish("chat", message).Err()
+			if err != nil {
+			    panic(err)
+			}
 			h.connections[conn] = true
 		case conn := <-h.unregister:
 			if _, ok := h.connections[conn]; ok {
